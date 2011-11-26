@@ -8,9 +8,12 @@
 
 #import "HSPlayerView.h"
 
+// Contexts for KVO
 static void *HSPlayerViewPlayerRateObservationContext = &HSPlayerViewPlayerRateObservationContext;
 static void *HSPlayerViewPlayerCurrentItemObservationContext = &HSPlayerViewPlayerCurrentItemObservationContext;
 static void *HSPlayerViewPlayerItemStatusObservationContext = &HSPlayerViewPlayerItemStatusObservationContext;
+static void *HSPlayerViewPlaterItemDurationObservationContext = &HSPlayerViewPlaterItemDurationObservationContext;
+static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlayerViewPlayerLayerReadyForDisplayObservationContext;
 
 @interface HSPlayerView ()
 /*
@@ -24,9 +27,17 @@ static void *HSPlayerViewPlayerItemStatusObservationContext = &HSPlayerViewPlaye
  Defaults to AVLayerVideoGravityResizeAspect
  */
 @property (nonatomic, readonly) AVPlayerLayer *playerLayer;
+@property (nonatomic, strong) AVAsset *asset;
 @property (nonatomic, strong) AVPlayerItem *playerItem;
+@property (nonatomic, assign) CMTime duration;
 
-- (void)doneLoadingAsset:(AVURLAsset *)asset withKeys:(NSArray *)keys;
+@property (nonatomic, strong) id playerTimeObserver;
+
+@property (nonatomic, assign) BOOL seekToZeroBeforePlay;
+@property (nonatomic, assign) BOOL readyForDisplayTriggered;
+
+
+- (void)doneLoadingAsset:(AVAsset *)asset withKeys:(NSArray *)keys;
 @end
 
 @implementation HSPlayerView
@@ -34,15 +45,29 @@ static void *HSPlayerViewPlayerItemStatusObservationContext = &HSPlayerViewPlaye
 @dynamic player;
 @dynamic playerLayer;
 
+@synthesize asset = _asset;
 @synthesize URL = _URL;
 @synthesize playerItem = _playerItem;
+@dynamic duration;
+
+@synthesize playerTimeObserver = _playerTimeObserver;
+
+@synthesize seekToZeroBeforePlay = _seekToZeroBeforePlay;
+@synthesize readyForDisplayTriggered = _readyForDisplayTriggered;
+
 
 + (Class)layerClass {
     return [AVPlayerLayer class];
 }
 
 - (id)initWithFrame:(CGRect)frame {
-    if ((self = [super initWithFrame:frame])) {}
+    if ((self = [super initWithFrame:frame])) {
+        [self.playerLayer setOpacity:0];
+        [self.playerLayer addObserver:self
+                           forKeyPath:@"readyForDisplay"
+                              options:(NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew)
+                              context:HSPlayerViewPlayerLayerReadyForDisplayObservationContext];
+    }
     
     return self;
 }
@@ -65,7 +90,7 @@ static void *HSPlayerViewPlayerItemStatusObservationContext = &HSPlayerViewPlaye
             case AVPlayerStatusReadyToPlay: {
                 // Get duration
                 // Enable GO!
-                [self.player play];
+                [self play:self];
             }
                 break;
                 
@@ -94,12 +119,31 @@ static void *HSPlayerViewPlayerItemStatusObservationContext = &HSPlayerViewPlaye
             [self.playerLayer setVideoGravity:AVLayerVideoGravityResizeAspect];
         }
 	}
+    
+    else if (context == HSPlayerViewPlaterItemDurationObservationContext) {
+        // Sync scrubber
+    }
+    
+    // Animate in the player layer
+    else if (context == HSPlayerViewPlayerLayerReadyForDisplayObservationContext) {
+        BOOL ready = [[change objectForKey:NSKeyValueChangeNewKey] boolValue];
+        if (ready && !self.readyForDisplayTriggered) {
+            [self setReadyForDisplayTriggered:YES];
+            
+            CABasicAnimation *animation = [CABasicAnimation animationWithKeyPath:@"opacity"];
+            [animation setFromValue:[NSNumber numberWithFloat:0.]];
+            [animation setToValue:[NSNumber numberWithFloat:1.]];
+            [animation setDuration:1.];
+            [self.playerLayer addAnimation:animation forKey:nil];
+            [self.playerLayer setOpacity:1.];
+        }
+    }
+    
 	else
         [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
 }
 
 #pragma mark - Properties
-#pragma mark Public
 
 - (AVPlayer *)player {
     return [(AVPlayerLayer *)[self layer] player];
@@ -120,21 +164,47 @@ static void *HSPlayerViewPlayerItemStatusObservationContext = &HSPlayerViewPlaye
     
     // Create Asset, and load
     
-    AVURLAsset *asset = [AVURLAsset URLAssetWithURL:URL options:nil];
+    [self setAsset:[AVURLAsset URLAssetWithURL:URL options:nil]];
     NSArray *keys = [NSArray arrayWithObjects:@"tracks", @"playable", nil];
     
-    [asset loadValuesAsynchronouslyForKeys:keys completionHandler:^{
+    [self.asset loadValuesAsynchronouslyForKeys:keys completionHandler:^{
        dispatch_async(dispatch_get_main_queue(), ^{
            
            // Displatch to main queue!
-           [self doneLoadingAsset:asset withKeys:keys];
+           [self doneLoadingAsset:self.asset withKeys:keys];
        });
     }];
 }
 
+- (CMTime)duration {
+    if ([self.playerItem respondsToSelector:@selector(duration)] && self.player.currentItem.status == AVPlayerItemStatusReadyToPlay)
+        return self.playerItem.duration;
+    else
+        return kCMTimeInvalid;
+}
+
+#pragma mark - 
+
+- (void)play:(id)sender {
+	if (self.seekToZeroBeforePlay)  {
+		[self setSeekToZeroBeforePlay:NO];
+		[self.player seekToTime:kCMTimeZero];
+	}
+    
+    [self.player play];
+	
+    // Update buttons
+}
+
+- (void)pause:(id)sender {
+    [self.player pause];
+    
+    // Update buttons
+}
+
 #pragma mark - Private
 
-- (void)doneLoadingAsset:(AVURLAsset *)asset withKeys:(NSArray *)keys {
+- (void)doneLoadingAsset:(AVAsset *)asset withKeys:(NSArray *)keys {
     
     // Check if all keys is OK
 	for (NSString *key in keys) {
@@ -170,10 +240,10 @@ static void *HSPlayerViewPlayerItemStatusObservationContext = &HSPlayerViewPlaye
     [[NSNotificationCenter defaultCenter] addObserverForName:AVPlayerItemDidPlayToEndTimeNotification
                                                       object:self.playerItem
                                                        queue:nil usingBlock:^(NSNotification *note) {
-                                                          //seekToZeroBeforePlay = YES; 
+                                                           [self setSeekToZeroBeforePlay:YES]; 
                                                        }];
     
-    //seekToZeroBeforePlay = NO; 
+    [self setSeekToZeroBeforePlay:YES];
 
     // Create the player
     if (!self.player) {

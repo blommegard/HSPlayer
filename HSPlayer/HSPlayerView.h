@@ -13,7 +13,10 @@
 @property (nonatomic, strong, readonly) AVPlayer *player;
 
 // Start player by setting the URL (for a start)
-@property (nonatomic, strong) NSURL *URL;
+@property (nonatomic, copy) NSURL *URL;
 
-@property (nonatomic, strong, readonly) AVPlayerItem *playerItem;
+@property (nonatomic, assign, readonly) CMTime duration;
+
+- (void)play:(id)sender;
+- (void)pause:(id)sender;
 @end
