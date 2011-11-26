@@ -122,6 +122,8 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     
     else if (context == HSPlayerViewPlaterItemDurationObservationContext) {
         // Sync scrubber
+        
+
     }
     
     // Animate in the player layer
@@ -136,6 +138,10 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
             [animation setDuration:1.];
             [self.playerLayer addAnimation:animation forKey:nil];
             [self.playerLayer setOpacity:1.];
+            
+            Float64 duration = CMTimeGetSeconds(self.duration);
+            
+            NSLog(@"DURATION: %f", duration); 
         }
     }
     
@@ -177,13 +183,20 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 }
 
 - (CMTime)duration {
-    if ([self.playerItem respondsToSelector:@selector(duration)] && self.player.currentItem.status == AVPlayerItemStatusReadyToPlay)
-        return self.playerItem.duration;
-    else
-        return kCMTimeInvalid;
+    // Pefered in HTTP Live Streaming.
+    if ([self.playerItem respondsToSelector:@selector(duration)] && // 4.3
+        self.player.currentItem.status == AVPlayerItemStatusReadyToPlay) {
+        if (CMTIME_IS_VALID(self.playerItem.duration))
+            return self.playerItem.duration;
+    }
+    
+    else if (CMTIME_IS_VALID(self.player.currentItem.asset.duration))
+        return self.player.currentItem.asset.duration;
+    
+    return kCMTimeInvalid;
 }
 
-#pragma mark - 
+#pragma mark -
 
 - (void)play:(id)sender {
 	if (self.seekToZeroBeforePlay)  {
