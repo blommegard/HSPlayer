@@ -6,6 +6,7 @@
 //  Copyright (c) 2011 Doubleint. All rights reserved.
 //
 //  ARC, AVQueuePlayer -> 4.1?
+//  All properties are observable
 
 #import <UIKit/UIKit.h>
 
@@ -17,4 +18,7 @@
 
 - (void)play:(id)sender;
 - (void)pause:(id)sender;
+
+@property (nonatomic, assign, getter = isControlsVisible) BOOL controlsVisible;
+- (void)setControlsVisible:(BOOL)controlsVisible animated:(BOOL)animated;
 @end

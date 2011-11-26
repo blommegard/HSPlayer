@@ -8,6 +8,9 @@
 
 #import "HSPlayerView.h"
 
+// Constants
+CGFloat const HSPlayerViewControlsAnimationDelay = .4; // ~ statusbar fade duration
+
 // Contexts for KVO
 static void *HSPlayerViewPlayerRateObservationContext = &HSPlayerViewPlayerRateObservationContext;
 static void *HSPlayerViewPlayerCurrentItemObservationContext = &HSPlayerViewPlayerCurrentItemObservationContext;
@@ -15,11 +18,7 @@ static void *HSPlayerViewPlayerItemStatusObservationContext = &HSPlayerViewPlaye
 static void *HSPlayerViewPlaterItemDurationObservationContext = &HSPlayerViewPlaterItemDurationObservationContext;
 static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlayerViewPlayerLayerReadyForDisplayObservationContext;
 
-@interface HSPlayerView ()
-/*
-@property (nonatomic, strong) UIView *bottomControlsView;
-@property (nonatomic, strong) UIView *topControlsView;
-*/
+@interface HSPlayerView () <UIGestureRecognizerDelegate>
 @property (nonatomic, strong, readwrite) AVPlayer *player;
 /*
  Use this to set the videoGravity, animatable
@@ -36,8 +35,11 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 @property (nonatomic, assign) BOOL seekToZeroBeforePlay;
 @property (nonatomic, assign) BOOL readyForDisplayTriggered;
 
+// Array of UIView-subclasses
+@property (nonatomic, strong) UIView *controlsView;
 
 - (void)doneLoadingAsset:(AVAsset *)asset withKeys:(NSArray *)keys;
+- (void)toggleControlsWithRecognizer:(UIGestureRecognizer *)recognizer;
 @end
 
 @implementation HSPlayerView
@@ -55,6 +57,9 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 @synthesize seekToZeroBeforePlay = _seekToZeroBeforePlay;
 @synthesize readyForDisplayTriggered = _readyForDisplayTriggered;
 
+@synthesize controlsVisible = _controlsVisible;
+
+@synthesize controlsView = _controlsView;
 
 + (Class)layerClass {
     return [AVPlayerLayer class];
@@ -67,6 +72,13 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
                            forKeyPath:@"readyForDisplay"
                               options:(NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew)
                               context:HSPlayerViewPlayerLayerReadyForDisplayObservationContext];
+        
+        UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(toggleControlsWithRecognizer:)];
+        [tap setDelegate:self];
+        [self addGestureRecognizer:tap];
+        
+        [self addSubview:self.controlsView];
+        [self setControlsVisible:NO];
     }
     
     return self;
@@ -122,7 +134,6 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     
     else if (context == HSPlayerViewPlaterItemDurationObservationContext) {
         // Sync scrubber
-        
 
     }
     
@@ -138,10 +149,6 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
             [animation setDuration:1.];
             [self.playerLayer addAnimation:animation forKey:nil];
             [self.playerLayer setOpacity:1.];
-            
-            Float64 duration = CMTimeGetSeconds(self.duration);
-            
-            NSLog(@"DURATION: %f", duration); 
         }
     }
     
@@ -196,6 +203,20 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     return kCMTimeInvalid;
 }
 
+- (void)setControlsVisible:(BOOL)controlsVisible {
+    [self setControlsVisible:controlsVisible animated:NO];
+}
+
+- (UIView *)controlsView {
+    if (!_controlsView) {
+        _controlsView = [[UIView alloc] initWithFrame:CGRectMake(0., 0., 50., 50.)];
+        [_controlsView setBackgroundColor:[UIColor redColor]];
+        [_controlsView setUserInteractionEnabled:YES];
+    }
+    
+    return _controlsView;
+}
+
 #pragma mark -
 
 - (void)play:(id)sender {
@@ -213,6 +234,27 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     [self.player pause];
     
     // Update buttons
+}
+
+- (void)setControlsVisible:(BOOL)controlsVisible animated:(BOOL)animated {
+    [self willChangeValueForKey:@"controlsVisible"];
+    _controlsVisible = controlsVisible;
+    [self didChangeValueForKey:@"controlsVisible"];
+    
+    if (controlsVisible)
+        [self.controlsView setHidden:NO];
+    
+    [UIView animateWithDuration:(animated ? HSPlayerViewControlsAnimationDelay:0.)
+                          delay:0.
+                        options:(UIViewAnimationCurveEaseInOut)
+                     animations:^{
+                         [self.controlsView setAlpha:(controlsVisible ? 1.:0.)];
+                     } completion:^(BOOL finished) {
+                         if (!controlsVisible)
+                             [self.controlsView setHidden:YES];
+                     }];
+    
+    [[UIApplication sharedApplication] setStatusBarHidden:(!controlsVisible) withAnimation:UIStatusBarAnimationFade];
 }
 
 #pragma mark - Private
@@ -284,6 +326,20 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     }
     
     // Scrub to start
+}
+
+- (void)toggleControlsWithRecognizer:(UIGestureRecognizer *)recognizer {
+    [self setControlsVisible:(!self.controlsVisible) animated:YES];
+}
+
+#pragma mark - UIGestureRecognizerDelegate
+
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldReceiveTouch:(UITouch *)touch {
+    // We dont want to to hide the controls when we tap em
+    if (CGRectContainsPoint(self.controlsView.frame, [touch locationInView:self]) && self.controlsVisible)
+        return NO;
+
+    return YES;
 }
 
 @end
