@@ -37,9 +37,14 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 @property (nonatomic, strong) NSArray *controls;
 
 // Controls
-@property (nonatomic, strong) UIView *scrubberControlView;
-@property (nonatomic, strong) UIButton *playPauseControlButton;
+@property (nonatomic, strong) UIView *topControlView;
 @property (nonatomic, strong) UIButton *closeControlButton;
+@property (nonatomic, strong) UISlider *scrubberControlSlider;
+@property (nonatomic, strong) UILabel *currentPlayerTimeLabel;
+@property (nonatomic, strong) UILabel *remainingPlayerTimeLabel;
+
+@property (nonatomic, strong) UIView *bottomControlView;
+@property (nonatomic, strong) UIButton *playPauseControlButton;
 
 // Gesture Recognizers
 @property (nonatomic, strong) UITapGestureRecognizer *singleTapRecognizer;
@@ -75,10 +80,17 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 
 @synthesize controlsVisible = _controlsVisible;
 
+@synthesize fullScreen = _fullScreen;
+
 @synthesize controls = _controls;
-@synthesize scrubberControlView = _scrubberControlView;
-@synthesize playPauseControlButton = _playPauseControlButton;
+@synthesize topControlView = _topControlView;
 @synthesize closeControlButton = _closeControlButton;
+@synthesize scrubberControlSlider = _scrubberControlSlider;
+@synthesize currentPlayerTimeLabel = _currentPlayerTimeLabel;
+@synthesize remainingPlayerTimeLabel = _remainingPlayerTimeLabel;
+
+@synthesize bottomControlView = _bottomControlView;
+@synthesize playPauseControlButton = _playPauseControlButton;
 
 @synthesize singleTapRecognizer = _singleTapRecognizer;
 @synthesize doubleTapRecognizer = _doubleTapRecognizer;
@@ -106,6 +118,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
             [self addSubview:view];
         
         [self setControlsVisible:NO];
+        [self setFullScreen:YES];
     }
     
     return self;
@@ -150,11 +163,37 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
         
         // Null?
         if (newPlayerItem == (id)[NSNull null]) {
-            // Disable
+            [self setPlayerTimeObserver:nil];
         }
         else {
             // New title
             [self syncPlayPauseButton];
+            
+            
+            __unsafe_unretained HSPlayerView *weakSelf = self;
+            [self setPlayerTimeObserver:[self.player addPeriodicTimeObserverForInterval:CMTimeMakeWithSeconds(.5, NSEC_PER_SEC)
+                                                                                  queue:dispatch_get_main_queue()
+                                                                             usingBlock:^(CMTime time) {
+                                                                                 
+                                                                                 HSPlayerView *strongSelf = weakSelf;
+                                                                                 
+                                                                                 if (CMTIME_IS_VALID(strongSelf.player.currentTime) && CMTIME_IS_VALID(strongSelf.duration)) {
+                                                                                 
+                                                                                 NSInteger currentSeconds = ceilf(CMTimeGetSeconds(strongSelf.player.currentTime)); 
+                                                                                 NSInteger seconds = currentSeconds % 60;
+                                                                                 NSInteger minutes = currentSeconds / 60;
+                                                                                 NSInteger hours = minutes / 60;
+                                                                                 
+                                                                                 NSInteger duration = ceilf(CMTimeGetSeconds(strongSelf.duration));
+                                                                                 NSInteger currentDurationSeconds = duration-currentSeconds;
+                                                                                 NSInteger durationSeconds = currentDurationSeconds % 60;
+                                                                                 NSInteger durationMinutes = currentDurationSeconds / 60;
+                                                                                 NSInteger durationHours = durationMinutes / 60;
+                                                                                 
+                                                                                 [strongSelf.currentPlayerTimeLabel setText:[NSString stringWithFormat:@"%02d:%02d:%02d", hours, minutes, seconds]];
+                                                                                 [strongSelf.remainingPlayerTimeLabel setText:[NSString stringWithFormat:@"- %02d:%02d:%02d", durationHours, durationMinutes, durationSeconds]];
+                                                                                 }
+                                                                             }]];
         }
 	}
     
@@ -179,7 +218,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     }
     
     else if (context == HSPlayerViewPlayerAirPlayVideoActiveObservationContext) {
-        // Show airplay-image
+        // Show/hide airplay-image
     }
     
 	else
@@ -230,6 +269,14 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     }];
 }
 
+- (void)setFullScreen:(BOOL)fullScreen {
+    [self willChangeValueForKey:@"fullScreen"];
+    _fullScreen = fullScreen;
+    [self didChangeValueForKey:@"fullScreen"];
+    
+    [[UIApplication sharedApplication] setStatusBarHidden:fullScreen withAnimation:UIStatusBarAnimationFade];
+}
+
 - (CMTime)duration {
     // Pefered in HTTP Live Streaming.
     if ([self.playerItem respondsToSelector:@selector(duration)] && // 4.3
@@ -248,41 +295,89 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     [self setControlsVisible:controlsVisible animated:NO];
 }
 
+#pragma mark - Controls
+
 - (NSArray *)controls {
     if (!_controls) {
         _controls = [NSArray arrayWithObjects:
-                     self.scrubberControlView,
-//                     self.closeControlButton,
+                     self.topControlView,
+                     self.bottomControlView,
                      nil];
     }
     
     return _controls;
 }
 
-// Controls
-- (UIView *)scrubberControlView {
-    if (!_scrubberControlView) {
-        _scrubberControlView = [[UIView alloc] initWithFrame:CGRectMake(0., self.bounds.size.height-40., self.bounds.size.width, 40.)];
-        [_scrubberControlView setBackgroundColor:[UIColor colorWithWhite:0. alpha:.75]];
-        [_scrubberControlView setAutoresizingMask:(UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleWidth)];
+- (UIView *)topControlView {
+    if (!_topControlView) {
+        _topControlView = [[UIView alloc] initWithFrame:CGRectMake(0., 20., self.bounds.size.width, 40.)];
+        [_topControlView setBackgroundColor:[UIColor colorWithWhite:0. alpha:.5]];
+        [_topControlView setAutoresizingMask:(UIViewAutoresizingFlexibleWidth)];
         
-        MPVolumeView *volumeView = [[MPVolumeView alloc] init];
+        [self.currentPlayerTimeLabel setFrame:CGRectMake(10., 20., 100., 20.)];
+        [_topControlView addSubview:self.currentPlayerTimeLabel];
         
-        // Airplay?
-        if ([volumeView respondsToSelector:@selector(showsRouteButton)]) {
-            [volumeView setShowsRouteButton:YES];
-            [volumeView setShowsVolumeSlider:NO]; // Dont realy need the software volume shit
-            
-            [volumeView setCenter:CGPointMake(_scrubberControlView.bounds.size.width-40., _scrubberControlView.bounds.size.height/2-10.)]; // Ugly values..
-            [volumeView setAutoresizingMask:(UIViewAutoresizingFlexibleLeftMargin)];
-            [_scrubberControlView addSubview:volumeView];
-        }
-
-        [self.playPauseControlButton setFrame:CGRectMake(10., 10., 20., 20.)];
-        [_scrubberControlView addSubview:self.playPauseControlButton];
+        [self.remainingPlayerTimeLabel setFrame:CGRectMake(_topControlView.bounds.size.width-100.-10., 20., 100., 20.)];
+        [_topControlView addSubview:self.remainingPlayerTimeLabel];
     }
     
-    return _scrubberControlView;
+    return _topControlView;
+}
+
+- (UILabel *)currentPlayerTimeLabel {
+    if (!_currentPlayerTimeLabel) {
+        _currentPlayerTimeLabel = [[UILabel alloc] initWithFrame:CGRectZero];
+        [_currentPlayerTimeLabel setBackgroundColor:[UIColor clearColor]];
+        [_currentPlayerTimeLabel setTextColor:[UIColor whiteColor]];
+        [_currentPlayerTimeLabel setFont:[UIFont systemFontOfSize:12.]];
+    }
+    
+    return _currentPlayerTimeLabel;
+}
+
+- (UILabel *)remainingPlayerTimeLabel {
+    if (!_remainingPlayerTimeLabel) {
+        _remainingPlayerTimeLabel = [[UILabel alloc] initWithFrame:CGRectZero];
+        [_remainingPlayerTimeLabel setBackgroundColor:[UIColor clearColor]];
+        [_remainingPlayerTimeLabel setTextColor:[UIColor whiteColor]];
+        [_remainingPlayerTimeLabel setFont:[UIFont systemFontOfSize:12.]];
+        [_remainingPlayerTimeLabel setTextAlignment:UITextAlignmentRight];
+        [_remainingPlayerTimeLabel setAutoresizingMask:(UIViewAutoresizingFlexibleLeftMargin)];
+    }
+    
+    return _remainingPlayerTimeLabel;
+}
+
+- (UIButton *)closeControlButton {
+    return _closeControlButton;
+}
+
+- (UISlider *)scrubberControlSlider {
+    if (!_scrubberControlSlider) {
+        _scrubberControlSlider = [[UISlider alloc] initWithFrame:CGRectZero];
+        [_scrubberControlSlider setAutoresizingMask:(UIViewAutoresizingFlexibleWidth)];
+        
+        // Add sync for changed value..
+    }
+    
+    return _scrubberControlSlider;
+}
+
+- (UIView *)bottomControlView {
+    if (!_bottomControlView) {
+        _bottomControlView = [[UIView alloc] initWithFrame:CGRectMake(0., self.bounds.size.height-40., self.bounds.size.width, 40.)];
+        [_bottomControlView setBackgroundColor:[UIColor colorWithWhite:0. alpha:.5]];
+        [_bottomControlView setAutoresizingMask:(UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleWidth)];
+
+        MPVolumeView *volumeView = [[MPVolumeView alloc] initWithFrame:CGRectMake(40., 11., _bottomControlView.bounds.size.width-50., 18.)];
+        [volumeView setAutoresizingMask:(UIViewAutoresizingFlexibleWidth)];
+        [_bottomControlView addSubview:volumeView];
+
+        [self.playPauseControlButton setFrame:CGRectMake(10., 10., 20., 20.)];
+        [_bottomControlView addSubview:self.playPauseControlButton];
+    }
+    
+    return _bottomControlView;
 }
 
 - (UIButton *)playPauseControlButton {
@@ -295,9 +390,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     return _playPauseControlButton;
 }
 
-- (UIButton *)closeControlButton {
-    return _closeControlButton;
-}
+#pragma mark -
 
 - (UITapGestureRecognizer *)singleTapRecognizer {
     if (!_singleTapRecognizer) {
@@ -320,7 +413,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     return _doubleTapRecognizer;
 }
 
-#pragma mark -
+#pragma mark Public
 
 - (void)play:(id)sender {
 	if (self.seekToZeroBeforePlay)  {
@@ -329,14 +422,10 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 	}
     
     [self.player play];
-	
-    // Update buttons
 }
 
 - (void)pause:(id)sender {
     [self.player pause];
-    
-    // Update buttons
 }
 
 - (BOOL)isPlaying {
@@ -365,7 +454,8 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
                                  [view setHidden:YES];
                      }];
     
-    [[UIApplication sharedApplication] setStatusBarHidden:(!controlsVisible) withAnimation:UIStatusBarAnimationFade];
+    if (self.fullScreen)
+        [[UIApplication sharedApplication] setStatusBarHidden:(!controlsVisible) withAnimation:UIStatusBarAnimationFade];
 }
 
 #pragma mark - Private
@@ -484,7 +574,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
         [path closePath];
         
         [[UIColor whiteColor] setFill];
-        CGContextSetShadowWithColor(context, CGSizeMake(1., 0.), 5., [UIColor colorWithWhite:1. alpha:.5].CGColor);
+        CGContextSetShadowWithColor(context, CGSizeMake(1., 0.), 2., [UIColor colorWithWhite:1. alpha:.5].CGColor);
         [path fill];
         
         _playImage = UIGraphicsGetImageFromCurrentImageContext();
@@ -503,7 +593,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
         UIBezierPath *path2 = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(20.-7., 0., 7., 20.) cornerRadius:1.];
         
         [[UIColor whiteColor] setFill];
-        CGContextSetShadowWithColor(context, CGSizeMake(1., 0.), 5., [UIColor colorWithWhite:1. alpha:.5].CGColor);
+        CGContextSetShadowWithColor(context, CGSizeMake(1., 0.), 2., [UIColor colorWithWhite:1. alpha:.5].CGColor);
         [path1 fill];
         [path2 fill];
         

@@ -29,4 +29,7 @@
 
 @property (nonatomic, assign, getter = isControlsVisible) BOOL controlsVisible;
 - (void)setControlsVisible:(BOOL)controlsVisible animated:(BOOL)animated;
+
+// Hides statusBar if true, defaults to YES
+@property (nonatomic, assign) BOOL fullScreen;
 @end
