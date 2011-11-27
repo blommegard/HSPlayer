@@ -18,6 +18,7 @@
 		F4443E6514809D3900B35F2D /* HSPlayerViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F4443E6414809D3900B35F2D /* HSPlayerViewController.m */; };
 		F4443E6D1481107A00B35F2D /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F4443E6C1481107A00B35F2D /* CoreMedia.framework */; };
 		F4443E6F1481108200B35F2D /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F4443E6E1481108200B35F2D /* QuartzCore.framework */; };
+		F46E22811482B58D00D3CE85 /* MediaPlayer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F46E22801482B58D00D3CE85 /* MediaPlayer.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -38,6 +39,7 @@
 		F4443E6414809D3900B35F2D /* HSPlayerViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HSPlayerViewController.m; sourceTree = "<group>"; };
 		F4443E6C1481107A00B35F2D /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
 		F4443E6E1481108200B35F2D /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		F46E22801482B58D00D3CE85 /* MediaPlayer.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MediaPlayer.framework; path = System/Library/Frameworks/MediaPlayer.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -45,6 +47,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F46E22811482B58D00D3CE85 /* MediaPlayer.framework in Frameworks */,
 				F4443E6F1481108200B35F2D /* QuartzCore.framework in Frameworks */,
 				F4443E6D1481107A00B35F2D /* CoreMedia.framework in Frameworks */,
 				F4443E5B148079A800B35F2D /* AVFoundation.framework in Frameworks */,
@@ -77,6 +80,7 @@
 		F4443E3F148078F300B35F2D /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				F46E22801482B58D00D3CE85 /* MediaPlayer.framework */,
 				F4443E6E1481108200B35F2D /* QuartzCore.framework */,
 				F4443E6C1481107A00B35F2D /* CoreMedia.framework */,
 				F4443E5A148079A800B35F2D /* AVFoundation.framework */,
@@ -215,7 +219,7 @@
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 4.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 4.0;
 				SDKROOT = iphoneos;
 			};
 			name = Debug;
@@ -233,7 +237,7 @@
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 4.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 4.0;
 				OTHER_CFLAGS = "-DNS_BLOCK_ASSERTIONS=1";
 				SDKROOT = iphoneos;
 				VALIDATE_PRODUCT = YES;
@@ -246,7 +250,7 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "HSPlayer/HSPlayer-Prefix.pch";
 				INFOPLIST_FILE = "HSPlayer/HSPlayer-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 4.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 4.0;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
 			};
@@ -258,7 +262,7 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "HSPlayer/HSPlayer-Prefix.pch";
 				INFOPLIST_FILE = "HSPlayer/HSPlayer-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 4.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 4.0;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
 			};
