@@ -63,11 +63,11 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 - (void)playPause:(id)sender;
 - (void)syncPlayPauseButton;
 
-// Scrobber
+// Scrubbing
+@property (nonatomic, assign, getter = isScrubbing) BOOL scrubbing;
 - (void)beginScrubbing:(id)sender;
 - (void)scrub:(id)sender;
 - (void)endScrubbing:(id)sender;
-
 - (void)syncScrobber;
 
 // Custom images for controls
@@ -106,6 +106,8 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 
 @synthesize singleTapRecognizer = _singleTapRecognizer;
 @synthesize doubleTapRecognizer = _doubleTapRecognizer;
+
+@synthesize scrubbing = _scrubbing;
 
 @synthesize playImage = _playImage;
 @synthesize pauseImage = _pauseImage;
@@ -156,7 +158,9 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
             case AVPlayerStatusReadyToPlay: {
                 
                 // Enable buttons & scrubber
-                [self play:self];
+                
+                if (!self.isScrubbing)
+                    [self play:self];
             }
             break;
                 
@@ -576,6 +580,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 
 - (void)beginScrubbing:(id)sender {
     [self removePlayerTimeObserver];
+    [self setScrubbing:YES];
     [self.player setRate:0.];
 }
 
@@ -585,6 +590,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 
 - (void)endScrubbing:(id)sender {
     [self.player setRate:1.];
+    [self setScrubbing:NO];
     [self addPlayerTimeObserver];
 }
 
@@ -606,6 +612,8 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     [self.scrubberControlSlider setMinimumValue:0.];
     [self.scrubberControlSlider setMaximumValue:duration];
     [self.scrubberControlSlider setValue:currentSeconds];
+    
+    NSLog(@"%@", self.player.currentItem.seekableTimeRanges);
 }
 
 #pragma mark - UIGestureRecognizerDelegate
