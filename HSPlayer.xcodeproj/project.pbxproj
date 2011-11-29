@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F42B535B1485092400563B55 /* HSSlider.m in Sources */ = {isa = PBXBuildFile; fileRef = F42B535A1485092400563B55 /* HSSlider.m */; };
 		F4443E41148078F300B35F2D /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F4443E40148078F300B35F2D /* UIKit.framework */; };
 		F4443E43148078F300B35F2D /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F4443E42148078F300B35F2D /* Foundation.framework */; };
 		F4443E45148078F300B35F2D /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F4443E44148078F300B35F2D /* CoreGraphics.framework */; };
@@ -22,6 +23,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		F42B53591485092400563B55 /* HSSlider.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HSSlider.h; sourceTree = "<group>"; };
+		F42B535A1485092400563B55 /* HSSlider.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HSSlider.m; sourceTree = "<group>"; };
 		F4443E3C148078F300B35F2D /* HSPlayer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HSPlayer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F4443E40148078F300B35F2D /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		F4443E42148078F300B35F2D /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -60,6 +63,17 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		F42B53571485091500563B55 /* Player */ = {
+			isa = PBXGroup;
+			children = (
+				F42B53591485092400563B55 /* HSSlider.h */,
+				F42B535A1485092400563B55 /* HSSlider.m */,
+				F4443E571480791200B35F2D /* HSPlayerView.h */,
+				F4443E581480791200B35F2D /* HSPlayerView.m */,
+			);
+			name = Player;
+			sourceTree = "<group>";
+		};
 		F4443E31148078F300B35F2D = {
 			isa = PBXGroup;
 			children = (
@@ -94,11 +108,10 @@
 		F4443E46148078F300B35F2D /* HSPlayer */ = {
 			isa = PBXGroup;
 			children = (
+				F42B53571485091500563B55 /* Player */,
 				F4443E4F148078F300B35F2D /* HSAppDelegate.h */,
 				F4443E50148078F300B35F2D /* HSAppDelegate.m */,
 				F4443E47148078F300B35F2D /* Supporting Files */,
-				F4443E571480791200B35F2D /* HSPlayerView.h */,
-				F4443E581480791200B35F2D /* HSPlayerView.m */,
 				F4443E6314809D3900B35F2D /* HSPlayerViewController.h */,
 				F4443E6414809D3900B35F2D /* HSPlayerViewController.m */,
 			);
@@ -182,6 +195,7 @@
 				F4443E51148078F300B35F2D /* HSAppDelegate.m in Sources */,
 				F4443E591480791200B35F2D /* HSPlayerView.m in Sources */,
 				F4443E6514809D3900B35F2D /* HSPlayerViewController.m in Sources */,
+				F42B535B1485092400563B55 /* HSSlider.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -7,6 +7,7 @@
 //
 
 #import "HSPlayerView.h"
+#import "HSSlider.h"
 #import <QuartzCore/QuartzCore.h>
 #import <MediaPlayer/MediaPlayer.h>
 
@@ -29,6 +30,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 @property (nonatomic, assign) CMTime duration;
 
 @property (nonatomic, strong) id playerTimeObserver;
+- (void)timeObserverTick:(CMTime)time;
 
 @property (nonatomic, assign) BOOL seekToZeroBeforePlay;
 @property (nonatomic, assign) BOOL readyForDisplayTriggered;
@@ -39,7 +41,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 // Controls
 @property (nonatomic, strong) UIView *topControlView;
 @property (nonatomic, strong) UIButton *closeControlButton;
-@property (nonatomic, strong) UISlider *scrubberControlSlider;
+@property (nonatomic, strong) HSSlider *scrubberControlSlider;
 @property (nonatomic, strong) UILabel *currentPlayerTimeLabel;
 @property (nonatomic, strong) UILabel *remainingPlayerTimeLabel;
 
@@ -50,10 +52,10 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 @property (nonatomic, strong) UITapGestureRecognizer *singleTapRecognizer;
 @property (nonatomic, strong) UITapGestureRecognizer *doubleTapRecognizer;
 
-- (void)doneLoadingAsset:(AVAsset *)asset withKeys:(NSArray *)keys;
-
 - (void)toggleControlsWithRecognizer:(UIGestureRecognizer *)recognizer;
 - (void)toggleVideoGravityWithRecognizer:(UIGestureRecognizer *)recognizer;
+
+- (void)doneLoadingAsset:(AVAsset *)asset withKeys:(NSArray *)keys;
 
 - (void)playPause:(id)sender;
 - (void)syncPlayPauseButton;
@@ -176,23 +178,8 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
                                                                              usingBlock:^(CMTime time) {
                                                                                  
                                                                                  HSPlayerView *strongSelf = weakSelf;
-                                                                                 
-                                                                                 if (CMTIME_IS_VALID(strongSelf.player.currentTime) && CMTIME_IS_VALID(strongSelf.duration)) {
-                                                                                 
-                                                                                 NSInteger currentSeconds = ceilf(CMTimeGetSeconds(strongSelf.player.currentTime)); 
-                                                                                 NSInteger seconds = currentSeconds % 60;
-                                                                                 NSInteger minutes = currentSeconds / 60;
-                                                                                 NSInteger hours = minutes / 60;
-                                                                                 
-                                                                                 NSInteger duration = ceilf(CMTimeGetSeconds(strongSelf.duration));
-                                                                                 NSInteger currentDurationSeconds = duration-currentSeconds;
-                                                                                 NSInteger durationSeconds = currentDurationSeconds % 60;
-                                                                                 NSInteger durationMinutes = currentDurationSeconds / 60;
-                                                                                 NSInteger durationHours = durationMinutes / 60;
-                                                                                 
-                                                                                 [strongSelf.currentPlayerTimeLabel setText:[NSString stringWithFormat:@"%02d:%02d:%02d", hours, minutes, seconds]];
-                                                                                 [strongSelf.remainingPlayerTimeLabel setText:[NSString stringWithFormat:@"- %02d:%02d:%02d", durationHours, durationMinutes, durationSeconds]];
-                                                                                 }
+                                                                                 if (CMTIME_IS_VALID(strongSelf.player.currentTime) && CMTIME_IS_VALID(strongSelf.duration))
+                                                                                     [strongSelf timeObserverTick:time];
                                                                              }]];
         }
 	}
@@ -319,6 +306,9 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
         
         [self.remainingPlayerTimeLabel setFrame:CGRectMake(_topControlView.bounds.size.width-100.-10., 20., 100., 20.)];
         [_topControlView addSubview:self.remainingPlayerTimeLabel];
+        
+        [self.scrubberControlSlider setFrame:CGRectMake(10., 5., self.bounds.size.width-20., 10.)];
+        [_topControlView addSubview:self.scrubberControlSlider];
     }
     
     return _topControlView;
@@ -352,10 +342,11 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     return _closeControlButton;
 }
 
-- (UISlider *)scrubberControlSlider {
+- (HSSlider *)scrubberControlSlider {
     if (!_scrubberControlSlider) {
-        _scrubberControlSlider = [[UISlider alloc] initWithFrame:CGRectZero];
+        _scrubberControlSlider = [[HSSlider alloc] initWithFrame:CGRectZero];
         [_scrubberControlSlider setAutoresizingMask:(UIViewAutoresizingFlexibleWidth)];
+        [_scrubberControlSlider setUserInteractionEnabled:NO];
         
         // Add sync for changed value..
     }
@@ -460,6 +451,17 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 
 #pragma mark - Private
 
+- (void)toggleControlsWithRecognizer:(UIGestureRecognizer *)recognizer {
+    [self setControlsVisible:(!self.controlsVisible) animated:YES];
+}
+
+- (void)toggleVideoGravityWithRecognizer:(UIGestureRecognizer *)recognizer {
+    if (self.playerLayer.videoGravity == AVLayerVideoGravityResizeAspect)
+        [self.playerLayer setVideoGravity:AVLayerVideoGravityResizeAspectFill];
+    else
+        [self.playerLayer setVideoGravity:AVLayerVideoGravityResizeAspect];
+}
+
 - (void)doneLoadingAsset:(AVAsset *)asset withKeys:(NSArray *)keys {
     
     // Check if all keys is OK
@@ -486,7 +488,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     }
     
     [self setPlayerItem:[AVPlayerItem playerItemWithAsset:asset]];
-     
+    
     // Observe status, ok -> play
     [self.playerItem addObserver:self
                       forKeyPath:@"status"
@@ -500,7 +502,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
                                                        }];
     
     [self setSeekToZeroBeforePlay:YES];
-
+    
     // Create the player
     if (!self.player) {
         [self setPlayer:[AVPlayer playerWithPlayerItem:self.playerItem]];
@@ -528,15 +530,26 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     // Scrub to start
 }
 
-- (void)toggleControlsWithRecognizer:(UIGestureRecognizer *)recognizer {
-    [self setControlsVisible:(!self.controlsVisible) animated:YES];
-}
-
-- (void)toggleVideoGravityWithRecognizer:(UIGestureRecognizer *)recognizer {
-    if (self.playerLayer.videoGravity == AVLayerVideoGravityResizeAspect)
-        [self.playerLayer setVideoGravity:AVLayerVideoGravityResizeAspectFill];
-    else
-        [self.playerLayer setVideoGravity:AVLayerVideoGravityResizeAspect];
+- (void)timeObserverTick:(CMTime)time {
+    NSInteger currentSeconds = ceilf(CMTimeGetSeconds(self.player.currentTime)); 
+    NSInteger seconds = currentSeconds % 60;
+    NSInteger minutes = currentSeconds / 60;
+    NSInteger hours = minutes / 60;
+    
+    NSInteger duration = ceilf(CMTimeGetSeconds(self.duration));
+    NSInteger currentDurationSeconds = duration-currentSeconds;
+    NSInteger durationSeconds = currentDurationSeconds % 60;
+    NSInteger durationMinutes = currentDurationSeconds / 60;
+    NSInteger durationHours = durationMinutes / 60;
+    
+    [self.currentPlayerTimeLabel setText:[NSString stringWithFormat:@"%02d:%02d:%02d", hours, minutes, seconds]];
+    [self.remainingPlayerTimeLabel setText:[NSString stringWithFormat:@"- %02d:%02d:%02d", durationHours, durationMinutes, durationSeconds]];
+    
+    [self.scrubberControlSlider setMinimumValue:0.];
+    [self.scrubberControlSlider setMaximumValue:duration];
+    [self.scrubberControlSlider setValue:currentSeconds];
+    
+    NSLog(@"%d - %d", duration, currentSeconds);
 }
 
 - (void)playPause:(id)sender {
