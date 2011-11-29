@@ -226,6 +226,10 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
         [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
 }
 
+- (void)dealloc {
+    [self setPlayerTimeObserver:nil];
+}
+
 #pragma mark - Properties
 
 - (AVPlayer *)player {
