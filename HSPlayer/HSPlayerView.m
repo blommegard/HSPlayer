@@ -184,7 +184,6 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
             // New title
             [self syncPlayPauseButton];
             
-            
             __unsafe_unretained HSPlayerView *weakSelf = self;
             id observer = [self.player addPeriodicTimeObserverForInterval:CMTimeMakeWithSeconds(.5, NSEC_PER_SEC)
                                                                     queue:dispatch_get_main_queue()
@@ -315,17 +314,17 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 
 - (UIView *)topControlView {
     if (!_topControlView) {
-        _topControlView = [[UIView alloc] initWithFrame:CGRectMake(0., 20., self.bounds.size.width, 40.)];
+        _topControlView = [[UIView alloc] initWithFrame:CGRectMake(0., 20., self.bounds.size.width, 20.)];
         [_topControlView setBackgroundColor:[UIColor colorWithWhite:0. alpha:.5]];
         [_topControlView setAutoresizingMask:(UIViewAutoresizingFlexibleWidth)];
         
-        [self.currentPlayerTimeLabel setFrame:CGRectMake(10., 20., 100., 20.)];
+        [self.currentPlayerTimeLabel setFrame:CGRectMake(10., 3., 55., 15.)];
         [_topControlView addSubview:self.currentPlayerTimeLabel];
         
-        [self.remainingPlayerTimeLabel setFrame:CGRectMake(_topControlView.bounds.size.width-100.-10., 20., 100., 20.)];
+        [self.remainingPlayerTimeLabel setFrame:CGRectMake(_topControlView.bounds.size.width-65., 3., 55., 15.)];
         [_topControlView addSubview:self.remainingPlayerTimeLabel];
         
-        [self.scrubberControlSlider setFrame:CGRectMake(10., 5., self.bounds.size.width-20., 10.)];
+        [self.scrubberControlSlider setFrame:CGRectMake(70., 3., self.bounds.size.width-140., 14.)];
         [_topControlView addSubview:self.scrubberControlSlider];
     }
     
@@ -338,6 +337,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
         [_currentPlayerTimeLabel setBackgroundColor:[UIColor clearColor]];
         [_currentPlayerTimeLabel setTextColor:[UIColor whiteColor]];
         [_currentPlayerTimeLabel setFont:[UIFont systemFontOfSize:12.]];
+        [_currentPlayerTimeLabel setTextAlignment:UITextAlignmentCenter];
     }
     
     return _currentPlayerTimeLabel;
@@ -349,7 +349,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
         [_remainingPlayerTimeLabel setBackgroundColor:[UIColor clearColor]];
         [_remainingPlayerTimeLabel setTextColor:[UIColor whiteColor]];
         [_remainingPlayerTimeLabel setFont:[UIFont systemFontOfSize:12.]];
-        [_remainingPlayerTimeLabel setTextAlignment:UITextAlignmentRight];
+        [_remainingPlayerTimeLabel setTextAlignment:UITextAlignmentCenter];
         [_remainingPlayerTimeLabel setAutoresizingMask:(UIViewAutoresizingFlexibleLeftMargin)];
     }
     
