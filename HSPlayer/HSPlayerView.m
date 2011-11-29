@@ -56,6 +56,10 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 
 - (void)doneLoadingAsset:(AVAsset *)asset withKeys:(NSArray *)keys;
 
+
+- (void)addPlayerTimeObserver;
+- (void)removePlayerTimeObserver;
+
 - (void)playPause:(id)sender;
 - (void)syncPlayPauseButton;
 
@@ -142,7 +146,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
         AVPlayerStatus status = [[change objectForKey:NSKeyValueChangeNewKey] integerValue];
         switch (status) {
             case AVPlayerStatusUnknown: {
-                [self setPlayerTimeObserver:nil];
+                [self removePlayerTimeObserver];
                 [self syncScrobber];
                 
                 // Disable buttons & scrubber
@@ -157,7 +161,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
             break;
                 
             case AVPlayerStatusFailed: {
-                [self setPlayerTimeObserver:nil];
+                [self removePlayerTimeObserver];
                 [self syncScrobber];
                 
                 // Disable buttons & scrubber
@@ -176,25 +180,14 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
         
         // Null?
         if (newPlayerItem == (id)[NSNull null]) {
-            [self setPlayerTimeObserver:nil];
+            [self removePlayerTimeObserver];
             
             // Disable buttons & scrubber
         }
         else {
             // New title
             [self syncPlayPauseButton];
-            
-            __unsafe_unretained HSPlayerView *weakSelf = self;
-            id observer = [self.player addPeriodicTimeObserverForInterval:CMTimeMakeWithSeconds(.5, NSEC_PER_SEC)
-                                                                    queue:dispatch_get_main_queue()
-                                                               usingBlock:^(CMTime time) {
-                                                                   
-                                                                   HSPlayerView *strongSelf = weakSelf;
-                                                                   if (CMTIME_IS_VALID(strongSelf.player.currentTime) && CMTIME_IS_VALID(strongSelf.duration))
-                                                                       [strongSelf syncScrobber];
-                                                               }];
-            
-            [self setPlayerTimeObserver:observer];
+            [self addPlayerTimeObserver];
         }
 	}
     
@@ -226,7 +219,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 }
 
 - (void)dealloc {
-    [self setPlayerTimeObserver:nil];
+    [self removePlayerTimeObserver];
 }
 
 #pragma mark - Properties
@@ -550,6 +543,29 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     // Scrub to start
 }
 
+- (void)addPlayerTimeObserver {
+    if (!_playerTimeObserver) {
+        __unsafe_unretained HSPlayerView *weakSelf = self;
+        id observer = [self.player addPeriodicTimeObserverForInterval:CMTimeMakeWithSeconds(.5, NSEC_PER_SEC)
+                                                                queue:dispatch_get_main_queue()
+                                                           usingBlock:^(CMTime time) {
+                                                               
+                                                               HSPlayerView *strongSelf = weakSelf;
+                                                               if (CMTIME_IS_VALID(strongSelf.player.currentTime) && CMTIME_IS_VALID(strongSelf.duration))
+                                                                   [strongSelf syncScrobber];
+                                                           }];
+        
+        [self setPlayerTimeObserver:observer];
+    }
+}
+
+- (void)removePlayerTimeObserver {
+    if (_playerTimeObserver) {
+        [self.player removeTimeObserver:self.playerTimeObserver];
+        [self setPlayerTimeObserver:nil];
+    }
+}
+
 - (void)playPause:(id)sender {
     [self isPlaying] ? [self pause:sender] : [self play:sender];
 }
@@ -559,6 +575,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 }
 
 - (void)beginScrubbing:(id)sender {
+    [self removePlayerTimeObserver];
     [self.player setRate:0.];
 }
 
@@ -568,6 +585,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 
 - (void)endScrubbing:(id)sender {
     [self.player setRate:1.];
+    [self addPlayerTimeObserver];
 }
 
 - (void)syncScrobber {
