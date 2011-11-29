@@ -68,7 +68,6 @@
     BOOL returnValue = [super beginTrackingWithTouch:touch withEvent:event];
     
     [self setValue:[self valueFromTouch:touch]];
-    [self setNeedsDisplay];
     
     if (self.continuous)
         [self sendActionsForControlEvents:UIControlEventValueChanged];
@@ -80,7 +79,6 @@
     BOOL returnValue = [super continueTrackingWithTouch:touch withEvent:event];
     
     [self setValue:[self valueFromTouch:touch]];
-    [self setNeedsDisplay];
     
     if (self.continuous)
         [self sendActionsForControlEvents:UIControlEventValueChanged];
@@ -108,6 +106,8 @@
     [self willChangeValueForKey:@"value"];
     _value = value;
     [self didChangeValueForKey:@"value"];
+    
+    [self setNeedsDisplay];
 }
 
 - (UIColor *)strokeColor {

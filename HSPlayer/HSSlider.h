@@ -9,7 +9,7 @@
 #import <UIKit/UIKit.h>
 
 @interface HSSlider : UIControl
-@property (nonatomic, assign) float value;
+@property (nonatomic, assign) float value; // observable
 @property (nonatomic, assign) float minimumValue;
 @property (nonatomic, assign) float maximumValue;
 

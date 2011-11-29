@@ -548,8 +548,6 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     [self.scrubberControlSlider setMinimumValue:0.];
     [self.scrubberControlSlider setMaximumValue:duration];
     [self.scrubberControlSlider setValue:currentSeconds];
-    
-    NSLog(@"%d - %d", duration, currentSeconds);
 }
 
 - (void)playPause:(id)sender {
@@ -576,7 +574,6 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 - (UIImage *)playImage {
     if (!_playImage) {
         UIGraphicsBeginImageContextWithOptions(CGSizeMake(20., 20.), NO, [[UIScreen mainScreen] scale]);
-        CGContextRef context = UIGraphicsGetCurrentContext();
         
         UIBezierPath *path = [UIBezierPath bezierPath];
         
@@ -587,7 +584,6 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
         [path closePath];
         
         [[UIColor whiteColor] setFill];
-        CGContextSetShadowWithColor(context, CGSizeMake(1., 0.), 2., [UIColor colorWithWhite:1. alpha:.5].CGColor);
         [path fill];
         
         _playImage = UIGraphicsGetImageFromCurrentImageContext();
@@ -599,14 +595,12 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 - (UIImage *)pauseImage {
     if (!_pauseImage) {
         UIGraphicsBeginImageContextWithOptions(CGSizeMake(20., 20.), NO, [[UIScreen mainScreen] scale]);
-        CGContextRef context = UIGraphicsGetCurrentContext();
         
         // ||
         UIBezierPath *path1 = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(0., 0., 7., 20.) cornerRadius:1.];
         UIBezierPath *path2 = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(20.-7., 0., 7., 20.) cornerRadius:1.];
         
         [[UIColor whiteColor] setFill];
-        CGContextSetShadowWithColor(context, CGSizeMake(1., 0.), 2., [UIColor colorWithWhite:1. alpha:.5].CGColor);
         [path1 fill];
         [path2 fill];
         
