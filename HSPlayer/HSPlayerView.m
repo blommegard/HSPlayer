@@ -30,7 +30,6 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 @property (nonatomic, assign) CMTime duration;
 
 @property (nonatomic, strong) id playerTimeObserver;
-- (void)timeObserverTick:(CMTime)time;
 
 @property (nonatomic, assign) BOOL seekToZeroBeforePlay;
 @property (nonatomic, assign) BOOL readyForDisplayTriggered;
@@ -59,6 +58,13 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 
 - (void)playPause:(id)sender;
 - (void)syncPlayPauseButton;
+
+// Scrobber
+- (void)beginScrubbing:(id)sender;
+- (void)scrub:(id)sender;
+- (void)endScrubbing:(id)sender;
+
+- (void)syncScrobber;
 
 // Custom images for controls
 @property (nonatomic, strong) UIImage *playImage;
@@ -136,22 +142,27 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
         AVPlayerStatus status = [[change objectForKey:NSKeyValueChangeNewKey] integerValue];
         switch (status) {
             case AVPlayerStatusUnknown: {
-                // Fail
-                // Sync buttons
+                [self setPlayerTimeObserver:nil];
+                [self syncScrobber];
+                
+                // Disable buttons & scrubber
             }
             break;
                 
             case AVPlayerStatusReadyToPlay: {
-                // Get duration
-                // Enable GO!
+                
+                // Enable buttons & scrubber
                 [self play:self];
             }
-                break;
+            break;
                 
             case AVPlayerStatusFailed: {
-                //Error
+                [self setPlayerTimeObserver:nil];
+                [self syncScrobber];
+                
+                // Disable buttons & scrubber
             }
-                break;
+            break;
         }
 	}
 
@@ -166,6 +177,8 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
         // Null?
         if (newPlayerItem == (id)[NSNull null]) {
             [self setPlayerTimeObserver:nil];
+            
+            // Disable buttons & scrubber
         }
         else {
             // New title
@@ -173,20 +186,21 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
             
             
             __unsafe_unretained HSPlayerView *weakSelf = self;
-            [self setPlayerTimeObserver:[self.player addPeriodicTimeObserverForInterval:CMTimeMakeWithSeconds(.5, NSEC_PER_SEC)
-                                                                                  queue:dispatch_get_main_queue()
-                                                                             usingBlock:^(CMTime time) {
-                                                                                 
-                                                                                 HSPlayerView *strongSelf = weakSelf;
-                                                                                 if (CMTIME_IS_VALID(strongSelf.player.currentTime) && CMTIME_IS_VALID(strongSelf.duration))
-                                                                                     [strongSelf timeObserverTick:time];
-                                                                             }]];
+            id observer = [self.player addPeriodicTimeObserverForInterval:CMTimeMakeWithSeconds(.5, NSEC_PER_SEC)
+                                                                    queue:dispatch_get_main_queue()
+                                                               usingBlock:^(CMTime time) {
+                                                                   
+                                                                   HSPlayerView *strongSelf = weakSelf;
+                                                                   if (CMTIME_IS_VALID(strongSelf.player.currentTime) && CMTIME_IS_VALID(strongSelf.duration))
+                                                                       [strongSelf syncScrobber];
+                                                               }];
+            
+            [self setPlayerTimeObserver:observer];
         }
 	}
     
     else if (context == HSPlayerViewPlaterItemDurationObservationContext) {
-        // Sync scrubber
-
+        [self syncScrobber];
     }
     
     // Animate in the player layer
@@ -346,9 +360,11 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     if (!_scrubberControlSlider) {
         _scrubberControlSlider = [[HSSlider alloc] initWithFrame:CGRectZero];
         [_scrubberControlSlider setAutoresizingMask:(UIViewAutoresizingFlexibleWidth)];
-        [_scrubberControlSlider setUserInteractionEnabled:NO];
         
-        // Add sync for changed value..
+        [_scrubberControlSlider addTarget:self action:@selector(beginScrubbing:) forControlEvents:UIControlEventTouchDown];
+        [_scrubberControlSlider addTarget:self action:@selector(scrub:) forControlEvents:UIControlEventValueChanged];
+        [_scrubberControlSlider addTarget:self action:@selector(endScrubbing:) forControlEvents:UIControlEventTouchUpInside];
+        [_scrubberControlSlider addTarget:self action:@selector(endScrubbing:) forControlEvents:UIControlEventTouchUpOutside];
     }
     
     return _scrubberControlSlider;
@@ -530,7 +546,27 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     // Scrub to start
 }
 
-- (void)timeObserverTick:(CMTime)time {
+- (void)playPause:(id)sender {
+    [self isPlaying] ? [self pause:sender] : [self play:sender];
+}
+
+- (void)syncPlayPauseButton {
+    [self.playPauseControlButton setImage:([self isPlaying] ? self.pauseImage : self.playImage) forState:UIControlStateNormal];
+}
+
+- (void)beginScrubbing:(id)sender {
+    [self.player setRate:0.];
+}
+
+- (void)scrub:(id)sender {
+    [self.player seekToTime:CMTimeMakeWithSeconds(self.scrubberControlSlider.value, NSEC_PER_SEC)];
+}
+
+- (void)endScrubbing:(id)sender {
+    [self.player setRate:1.];
+}
+
+- (void)syncScrobber {
     NSInteger currentSeconds = ceilf(CMTimeGetSeconds(self.player.currentTime)); 
     NSInteger seconds = currentSeconds % 60;
     NSInteger minutes = currentSeconds / 60;
@@ -543,19 +579,11 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     NSInteger durationHours = durationMinutes / 60;
     
     [self.currentPlayerTimeLabel setText:[NSString stringWithFormat:@"%02d:%02d:%02d", hours, minutes, seconds]];
-    [self.remainingPlayerTimeLabel setText:[NSString stringWithFormat:@"- %02d:%02d:%02d", durationHours, durationMinutes, durationSeconds]];
+    [self.remainingPlayerTimeLabel setText:[NSString stringWithFormat:@"-%02d:%02d:%02d", durationHours, durationMinutes, durationSeconds]];
     
     [self.scrubberControlSlider setMinimumValue:0.];
     [self.scrubberControlSlider setMaximumValue:duration];
     [self.scrubberControlSlider setValue:currentSeconds];
-}
-
-- (void)playPause:(id)sender {
-    [self isPlaying] ? [self pause:sender] : [self play:sender];
-}
-
-- (void)syncPlayPauseButton {
-    [self.playPauseControlButton setImage:([self isPlaying] ? self.pauseImage : self.playImage) forState:UIControlStateNormal];
 }
 
 #pragma mark - UIGestureRecognizerDelegate
