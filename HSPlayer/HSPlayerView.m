@@ -65,6 +65,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 
 // Scrubbing
 @property (nonatomic, assign, getter = isScrubbing) BOOL scrubbing;
+@property (nonatomic, assign) float restoreAfterScrubbingRate;
 - (void)beginScrubbing:(id)sender;
 - (void)scrub:(id)sender;
 - (void)endScrubbing:(id)sender;
@@ -108,6 +109,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 @synthesize doubleTapRecognizer = _doubleTapRecognizer;
 
 @synthesize scrubbing = _scrubbing;
+@synthesize restoreAfterScrubbingRate = _restoreAfterScrubbingRate;
 
 @synthesize playImage = _playImage;
 @synthesize pauseImage = _pauseImage;
@@ -133,6 +135,8 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
         
         [self setControlsVisible:NO];
         [self setFullScreen:YES];
+        
+        [self setRestoreAfterScrubbingRate:1.];
     }
     
     return self;
@@ -581,6 +585,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 - (void)beginScrubbing:(id)sender {
     [self removePlayerTimeObserver];
     [self setScrubbing:YES];
+    [self setRestoreAfterScrubbingRate:self.player.rate];
     [self.player setRate:0.];
 }
 
@@ -589,7 +594,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 }
 
 - (void)endScrubbing:(id)sender {
-    [self.player setRate:1.];
+    [self.player setRate:self.restoreAfterScrubbingRate];
     [self setScrubbing:NO];
     [self addPlayerTimeObserver];
 }
