@@ -10,6 +10,7 @@
 #import "HSSlider.h"
 #import <QuartzCore/QuartzCore.h>
 #import <MediaPlayer/MediaPlayer.h>
+#import <AVFoundation/AVFoundation.h>
 
 // Constants
 CGFloat const HSPlayerViewControlsAnimationDelay = .4; // ~ statusbar fade duration

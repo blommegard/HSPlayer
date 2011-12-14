@@ -10,6 +10,8 @@
 
 #import <UIKit/UIKit.h>
 
+@class AVPlayer, AVPlayerLayer;
+
 @interface HSPlayerView : UIView
 @property (nonatomic, strong, readonly) AVPlayer *player;
 /*
