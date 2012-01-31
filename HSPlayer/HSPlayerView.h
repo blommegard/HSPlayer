@@ -15,12 +15,6 @@
 
 @interface HSPlayerView : UIView
 @property (nonatomic, strong, readonly) AVPlayer *player;
-/*
- Use this to set the videoGravity, animatable
- Look in <AVFoundation/AVAnimation.h> for possible values
- Defaults to AVLayerVideoGravityResizeAspect
- */
-@property (nonatomic, readonly) AVPlayerLayer *playerLayer;
 
 // Start player by setting the URL (for a start)
 @property (nonatomic, copy) NSURL *URL;

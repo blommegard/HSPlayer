@@ -14,6 +14,7 @@
 
 // Constants
 CGFloat const HSPlayerViewControlsAnimationDelay = .4; // ~ statusbar fade duration
+CGFloat const HSPlayerViewAutoHideControlsDelay = 4.;
 
 // Contexts for KVO
 static void *HSPlayerViewPlayerRateObservationContext = &HSPlayerViewPlayerRateObservationContext;
@@ -25,6 +26,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 
 @interface HSPlayerView () <UIGestureRecognizerDelegate>
 @property (nonatomic, strong, readwrite) AVPlayer *player;
+@property (nonatomic, readonly) AVPlayerLayer *playerLayer;
 
 @property (nonatomic, strong) AVAsset *asset;
 @property (nonatomic, strong) AVPlayerItem *playerItem;
@@ -40,13 +42,18 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 
 // Controls
 @property (nonatomic, strong) UIView *topControlView;
-@property (nonatomic, strong) UIButton *closeControlButton;
 @property (nonatomic, strong) HSSlider *scrubberControlSlider;
 @property (nonatomic, strong) UILabel *currentPlayerTimeLabel;
 @property (nonatomic, strong) UILabel *remainingPlayerTimeLabel;
 
 @property (nonatomic, strong) UIView *bottomControlView;
 @property (nonatomic, strong) UIButton *playPauseControlButton;
+
+@property (nonatomic, strong) NSTimer *autoHideControlsTimer;
+
+- (void)autoHideControlsTimerFire:(NSTimer *)timer;
+- (void)triggerAutoHideControlsTimer;
+- (void)cancelAutoHideControlsTimer;
 
 // Gesture Recognizers
 @property (nonatomic, strong) UITapGestureRecognizer *singleTapRecognizer;
@@ -56,7 +63,6 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 - (void)toggleVideoGravityWithRecognizer:(UIGestureRecognizer *)recognizer;
 
 - (void)doneLoadingAsset:(AVAsset *)asset withKeys:(NSArray *)keys;
-
 
 - (void)addPlayerTimeObserver;
 - (void)removePlayerTimeObserver;
@@ -98,13 +104,14 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 
 @synthesize controls = _controls;
 @synthesize topControlView = _topControlView;
-@synthesize closeControlButton = _closeControlButton;
 @synthesize scrubberControlSlider = _scrubberControlSlider;
 @synthesize currentPlayerTimeLabel = _currentPlayerTimeLabel;
 @synthesize remainingPlayerTimeLabel = _remainingPlayerTimeLabel;
 
 @synthesize bottomControlView = _bottomControlView;
 @synthesize playPauseControlButton = _playPauseControlButton;
+
+@synthesize autoHideControlsTimer = _autoHideControlsTimer;
 
 @synthesize singleTapRecognizer = _singleTapRecognizer;
 @synthesize doubleTapRecognizer = _doubleTapRecognizer;
@@ -376,10 +383,6 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     return _remainingPlayerTimeLabel;
 }
 
-- (UIButton *)closeControlButton {
-    return _closeControlButton;
-}
-
 - (HSSlider *)scrubberControlSlider {
     if (!_scrubberControlSlider) {
         _scrubberControlSlider = [[HSSlider alloc] initWithFrame:CGRectZero];
@@ -453,10 +456,16 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 	}
     
     [self.player play];
+    
+    if (self.controlsVisible)
+        [self triggerAutoHideControlsTimer];
 }
 
 - (void)pause:(id)sender {
     [self.player pause];
+    
+    if (self.controlsVisible)
+        [self cancelAutoHideControlsTimer];
 }
 
 - (BOOL)isPlaying {
@@ -491,8 +500,29 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 
 #pragma mark - Private
 
+- (void)autoHideControlsTimerFire:(NSTimer *)timer {
+    [self setControlsVisible:NO animated:YES];
+    [self setAutoHideControlsTimer:nil];
+}
+
+- (void)triggerAutoHideControlsTimer {
+    [self setAutoHideControlsTimer:[NSTimer scheduledTimerWithTimeInterval:HSPlayerViewAutoHideControlsDelay
+                                                                    target:self
+                                                                  selector:@selector(autoHideControlsTimerFire:)
+                                                                  userInfo:nil
+                                                                   repeats:NO]];
+}
+
+- (void)cancelAutoHideControlsTimer {
+    [self.autoHideControlsTimer invalidate];
+    [self setAutoHideControlsTimer:nil];
+}
+
 - (void)toggleControlsWithRecognizer:(UIGestureRecognizer *)recognizer {
     [self setControlsVisible:(!self.controlsVisible) animated:YES];
+    
+    if (self.controlsVisible && self.isPlaying)
+        [self triggerAutoHideControlsTimer];
 }
 
 - (void)toggleVideoGravityWithRecognizer:(UIGestureRecognizer *)recognizer {
@@ -500,11 +530,14 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
         [self.playerLayer setVideoGravity:AVLayerVideoGravityResizeAspectFill];
     else
         [self.playerLayer setVideoGravity:AVLayerVideoGravityResizeAspect];
+    
+    // Bug in iOS5, this works, but will not animate
+    [self.playerLayer setFrame:self.playerLayer.frame];
 }
 
 - (void)doneLoadingAsset:(AVAsset *)asset withKeys:(NSArray *)keys {
     
-    // Check if all keys is OK
+    // Check if all keys are OK
 	for (NSString *key in keys) {
 		NSError *error = nil;
 		AVKeyValueStatus status = [asset statusOfValueForKey:key error:&error];
