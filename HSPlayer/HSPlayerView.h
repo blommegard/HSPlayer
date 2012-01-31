@@ -11,6 +11,8 @@
 #import <UIKit/UIKit.h>
 #import <AVFoundation/AVFoundation.h>
 
+@class AVPlayer, AVPlayerLayer;
+
 @interface HSPlayerView : UIView
 @property (nonatomic, strong, readonly) AVPlayer *player;
 /*

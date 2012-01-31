@@ -10,6 +10,7 @@
 #import "HSSlider.h"
 #import <QuartzCore/QuartzCore.h>
 #import <MediaPlayer/MediaPlayer.h>
+#import <AVFoundation/AVFoundation.h>
 
 // Constants
 CGFloat const HSPlayerViewControlsAnimationDelay = .4; // ~ statusbar fade duration
@@ -235,6 +236,17 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 
 - (void)dealloc {
     [self removePlayerTimeObserver];
+	
+	[self.player removeObserver:self forKeyPath:@"rate"];
+    [self.player removeObserver:self forKeyPath:@"currentItem"];
+	[self.playerItem removeObserver:self forKeyPath:@"status"];
+    [self.playerItem removeObserver:self forKeyPath:@"duration"];
+    [self.playerLayer removeObserver:self forKeyPath:@"readyForDisplay"];
+
+    if ([self.playerItem respondsToSelector:@selector(allowsAirPlayVideo)])
+        [self.playerItem removeObserver:self forKeyPath:@"airPlayVideoActive"];
+    
+	[self.player pause];
 }
 
 #pragma mark - Properties
@@ -522,6 +534,12 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
                       forKeyPath:@"status"
                          options:(NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew)
                          context:HSPlayerViewPlayerItemStatusObservationContext];
+    
+    // Durationchange
+    [self.playerItem addObserver:self
+                      forKeyPath:@"duration"
+                         options:(NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew)
+                         context:HSPlayerViewPlaterItemDurationObservationContext];
     
     [[NSNotificationCenter defaultCenter] addObserverForName:AVPlayerItemDidPlayToEndTimeNotification
                                                       object:self.playerItem
