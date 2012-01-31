@@ -9,6 +9,7 @@
 //  All properties are observable
 
 #import <UIKit/UIKit.h>
+#import <AVFoundation/AVFoundation.h>
 
 @interface HSPlayerView : UIView
 @property (nonatomic, strong, readonly) AVPlayer *player;

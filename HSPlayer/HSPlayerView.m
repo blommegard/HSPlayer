@@ -118,6 +118,13 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     return [AVPlayerLayer class];
 }
 
++ (void)initialize {
+    if (self == [HSPlayerView class]) {
+        NSError *error;
+        [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback error:&error];
+    }
+}
+
 - (id)initWithFrame:(CGRect)frame {
     if ((self = [super initWithFrame:frame])) {
         [self.playerLayer setOpacity:0];
