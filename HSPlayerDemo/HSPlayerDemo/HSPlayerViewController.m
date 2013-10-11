@@ -15,14 +15,19 @@
 
 @implementation HSPlayerViewController
 
-@synthesize playerView = _playerView;
-
-- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil {
-    if ((self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil])) {
-        [self setWantsFullScreenLayout:YES];
+- (id)initWithCoder:(NSCoder *)aDecoder {
+  if (self = [super initWithCoder:aDecoder]){
         [[UIApplication sharedApplication] setStatusBarStyle:UIStatusBarStyleBlackTranslucent];
     }
     return self;
+}
+
+- (BOOL)wantsFullScreenLayout {
+  return YES;
+}
+
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
+  return YES;
 }
 
 #pragma mark - View lifecycle
@@ -36,20 +41,10 @@
     [self.view addSubview:self.playerView];
 }
 
-- (void)viewWillAppear:(BOOL)animated {
-    [super viewWillAppear:animated];
-    
-    [self.playerView setFrame:self.view.bounds];
-}
-
 - (void)viewDidAppear:(BOOL)animated {
     [super viewDidAppear:animated];
     
     [self.playerView setURL:[NSURL URLWithString:@"http://devimages.apple.com/iphone/samples/bipbop/gear4/prog_index.m3u8"]];
-}
-
-- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
-    return YES;
 }
 
 @end

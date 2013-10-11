@@ -422,7 +422,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
   
     [UIView animateWithDuration:(animated ? HSPlayerViewControlsAnimationDelay:0.)
                           delay:0.
-                        options:(UIViewAnimationCurveEaseInOut)
+                        options:(UIViewAnimationOptionCurveEaseInOut)
                      animations:^{
                          for (UIView *view in self.controls)
                              [view setAlpha:(controlsVisible ? 1.:0.)];
