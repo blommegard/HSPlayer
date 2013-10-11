@@ -13,8 +13,8 @@
 #import <AVFoundation/AVFoundation.h>
 
 // Constants
-CGFloat const HSPlayerViewControlsAnimationDelay = .4; // ~ statusbar fade duration
-CGFloat const HSPlayerViewAutoHideControlsDelay = 4.;
+CGFloat const HSPlayerViewControlsAnimationDelay = .4f; // ~ statusbar fade duration
+CGFloat const HSPlayerViewAutoHideControlsDelay = 4.f;
 
 // Contexts for KVO
 static void *HSPlayerViewPlayerRateObservationContext = &HSPlayerViewPlayerRateObservationContext;
@@ -51,32 +51,13 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 
 @property (nonatomic, strong) NSTimer *autoHideControlsTimer;
 
-- (void)autoHideControlsTimerFire:(NSTimer *)timer;
-- (void)triggerAutoHideControlsTimer;
-- (void)cancelAutoHideControlsTimer;
-
 // Gesture Recognizers
 @property (nonatomic, strong) UITapGestureRecognizer *singleTapRecognizer;
 @property (nonatomic, strong) UITapGestureRecognizer *doubleTapRecognizer;
 
-- (void)toggleControlsWithRecognizer:(UIGestureRecognizer *)recognizer;
-- (void)toggleVideoGravityWithRecognizer:(UIGestureRecognizer *)recognizer;
-
-- (void)doneLoadingAsset:(AVAsset *)asset withKeys:(NSArray *)keys;
-
-- (void)addPlayerTimeObserver;
-- (void)removePlayerTimeObserver;
-
-- (void)playPause:(id)sender;
-- (void)syncPlayPauseButton;
-
 // Scrubbing
 @property (nonatomic, assign, getter = isScrubbing) BOOL scrubbing;
 @property (nonatomic, assign) float restoreAfterScrubbingRate;
-- (void)beginScrubbing:(id)sender;
-- (void)scrub:(id)sender;
-- (void)endScrubbing:(id)sender;
-- (void)syncScrobber;
 
 // Custom images for controls
 @property (nonatomic, strong) UIImage *playImage;
@@ -84,43 +65,6 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 @end
 
 @implementation HSPlayerView
-
-@dynamic player;
-@dynamic playerLayer;
-
-@synthesize asset = _asset;
-@synthesize URL = _URL;
-@synthesize playerItem = _playerItem;
-@dynamic duration;
-
-@synthesize playerTimeObserver = _playerTimeObserver;
-
-@synthesize seekToZeroBeforePlay = _seekToZeroBeforePlay;
-@synthesize readyForDisplayTriggered = _readyForDisplayTriggered;
-
-@synthesize controlsVisible = _controlsVisible;
-
-@synthesize fullScreen = _fullScreen;
-
-@synthesize controls = _controls;
-@synthesize topControlView = _topControlView;
-@synthesize scrubberControlSlider = _scrubberControlSlider;
-@synthesize currentPlayerTimeLabel = _currentPlayerTimeLabel;
-@synthesize remainingPlayerTimeLabel = _remainingPlayerTimeLabel;
-
-@synthesize bottomControlView = _bottomControlView;
-@synthesize playPauseControlButton = _playPauseControlButton;
-
-@synthesize autoHideControlsTimer = _autoHideControlsTimer;
-
-@synthesize singleTapRecognizer = _singleTapRecognizer;
-@synthesize doubleTapRecognizer = _doubleTapRecognizer;
-
-@synthesize scrubbing = _scrubbing;
-@synthesize restoreAfterScrubbingRate = _restoreAfterScrubbingRate;
-
-@synthesize playImage = _playImage;
-@synthesize pauseImage = _pauseImage;
 
 + (Class)layerClass {
     return [AVPlayerLayer class];
@@ -164,7 +108,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 	if (context == HSPlayerViewPlayerItemStatusObservationContext) {
         [self syncPlayPauseButton];
         
-        AVPlayerStatus status = [[change objectForKey:NSKeyValueChangeNewKey] integerValue];
+        AVPlayerStatus status = [change[NSKeyValueChangeNewKey] integerValue];
         switch (status) {
             case AVPlayerStatusUnknown: {
                 [self removePlayerTimeObserver];
@@ -199,7 +143,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     
     // -replaceCurrentItemWithPlayerItem: && new
 	else if (context == HSPlayerViewPlayerCurrentItemObservationContext) {
-        AVPlayerItem *newPlayerItem = [change objectForKey:NSKeyValueChangeNewKey];
+        AVPlayerItem *newPlayerItem = change[NSKeyValueChangeNewKey];
         
         // Null?
         if (newPlayerItem == (id)[NSNull null]) {
@@ -220,13 +164,13 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     
     // Animate in the player layer
     else if (context == HSPlayerViewPlayerLayerReadyForDisplayObservationContext) {
-        BOOL ready = [[change objectForKey:NSKeyValueChangeNewKey] boolValue];
+        BOOL ready = [change[NSKeyValueChangeNewKey] boolValue];
         if (ready && !self.readyForDisplayTriggered) {
             [self setReadyForDisplayTriggered:YES];
             
             CABasicAnimation *animation = [CABasicAnimation animationWithKeyPath:@"opacity"];
-            [animation setFromValue:[NSNumber numberWithFloat:0.]];
-            [animation setToValue:[NSNumber numberWithFloat:1.]];
+            [animation setFromValue:@0.f];
+            [animation setToValue:@1.f];
             [animation setDuration:1.];
             [self.playerLayer addAnimation:animation forKey:nil];
             [self.playerLayer setOpacity:1.];
@@ -282,14 +226,12 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 }
 
 - (void)setURL:(NSURL *)URL {
-    [self willChangeValueForKey:@"URL"];
     _URL = URL;
-    [self didChangeValueForKey:@"URL"];
     
     // Create Asset, and load
     
     [self setAsset:[AVURLAsset URLAssetWithURL:URL options:nil]];
-    NSArray *keys = [NSArray arrayWithObjects:@"tracks", @"playable", nil];
+    NSArray *keys = @[@"tracks", @"playable"];
     
     [self.asset loadValuesAsynchronouslyForKeys:keys completionHandler:^{
        dispatch_async(dispatch_get_main_queue(), ^{
@@ -301,9 +243,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 }
 
 - (void)setFullScreen:(BOOL)fullScreen {
-    [self willChangeValueForKey:@"fullScreen"];
     _fullScreen = fullScreen;
-    [self didChangeValueForKey:@"fullScreen"];
     
     [[UIApplication sharedApplication] setStatusBarHidden:fullScreen withAnimation:UIStatusBarAnimationFade];
 }
@@ -330,10 +270,8 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 
 - (NSArray *)controls {
     if (!_controls) {
-        _controls = [NSArray arrayWithObjects:
-                     self.topControlView,
-                     self.bottomControlView,
-                     nil];
+        _controls = @[self.topControlView,
+                     self.bottomControlView];
     }
     
     return _controls;
@@ -481,7 +419,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     if (controlsVisible)
         for (UIView *view in self.controls)
             [view setHidden:NO];
-    
+  
     [UIView animateWithDuration:(animated ? HSPlayerViewControlsAnimationDelay:0.)
                           delay:0.
                         options:(UIViewAnimationCurveEaseInOut)

@@ -102,10 +102,8 @@
     
     if (value < self.minimumValue)
         value = self.minimumValue;
-    
-    [self willChangeValueForKey:@"value"];
+  
     _value = value;
-    [self didChangeValueForKey:@"value"];
     
     [self setNeedsDisplay];
 }

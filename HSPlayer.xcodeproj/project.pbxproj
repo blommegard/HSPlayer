@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F40AA255180881670081F837 /* Default-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = F40AA254180881670081F837 /* Default-568h@2x.png */; };
 		F42B535B1485092400563B55 /* HSSlider.m in Sources */ = {isa = PBXBuildFile; fileRef = F42B535A1485092400563B55 /* HSSlider.m */; };
 		F4443E41148078F300B35F2D /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F4443E40148078F300B35F2D /* UIKit.framework */; };
 		F4443E43148078F300B35F2D /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F4443E42148078F300B35F2D /* Foundation.framework */; };
@@ -23,6 +24,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		F40AA254180881670081F837 /* Default-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-568h@2x.png"; sourceTree = "<group>"; };
 		F42B53591485092400563B55 /* HSSlider.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HSSlider.h; sourceTree = "<group>"; };
 		F42B535A1485092400563B55 /* HSSlider.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HSSlider.m; sourceTree = "<group>"; };
 		F4443E3C148078F300B35F2D /* HSPlayer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HSPlayer.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -77,6 +79,7 @@
 		F4443E31148078F300B35F2D = {
 			isa = PBXGroup;
 			children = (
+				F40AA254180881670081F837 /* Default-568h@2x.png */,
 				F4443E46148078F300B35F2D /* HSPlayer */,
 				F4443E3F148078F300B35F2D /* Frameworks */,
 				F4443E3D148078F300B35F2D /* Products */,
@@ -181,6 +184,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F4443E4B148078F300B35F2D /* InfoPlist.strings in Resources */,
+				F40AA255180881670081F837 /* Default-568h@2x.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
