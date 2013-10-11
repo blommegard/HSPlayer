@@ -123,7 +123,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
                 // Enable buttons & scrubber
                 
                 if (!self.isScrubbing)
-                    [self play:self];
+                  [self setPlaying:YES];
             }
             break;
                 
@@ -226,7 +226,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 }
 
 - (void)setURL:(NSURL *)URL {
-    _URL = URL;
+    _URL = [URL copy];
     
     // Create Asset, and load
     
@@ -264,6 +264,31 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 
 - (void)setControlsVisible:(BOOL)controlsVisible {
     [self setControlsVisible:controlsVisible animated:NO];
+}
+
+- (void)setPlaying:(BOOL)playing {
+  if (playing) {
+    if (self.seekToZeroBeforePlay)  {
+      [self setSeekToZeroBeforePlay:NO];
+      [self.player seekToTime:kCMTimeZero];
+    }
+    
+    [self.player play];
+    
+    if (self.controlsVisible)
+      [self triggerAutoHideControlsTimer];
+  }
+  else {
+    [self.player pause];
+    
+    if (self.controlsVisible)
+      [self cancelAutoHideControlsTimer];
+  }
+}
+
+- (BOOL)playing {
+  //	return mRestoreAfterScrubbingRate != 0.f ||
+  return (self.player.rate > 0.);
 }
 
 #pragma mark - Controls
@@ -385,31 +410,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     return _doubleTapRecognizer;
 }
 
-#pragma mark Public
-
-- (void)play:(id)sender {
-	if (self.seekToZeroBeforePlay)  {
-		[self setSeekToZeroBeforePlay:NO];
-		[self.player seekToTime:kCMTimeZero];
-	}
-    
-    [self.player play];
-    
-    if (self.controlsVisible)
-        [self triggerAutoHideControlsTimer];
-}
-
-- (void)pause:(id)sender {
-    [self.player pause];
-    
-    if (self.controlsVisible)
-        [self cancelAutoHideControlsTimer];
-}
-
-- (BOOL)isPlaying {
-    //	return mRestoreAfterScrubbingRate != 0.f || 
-    return (self.player.rate != 0.);
-}
+#pragma mark - Public
 
 - (void)setControlsVisible:(BOOL)controlsVisible animated:(BOOL)animated {
     [self willChangeValueForKey:@"controlsVisible"];
@@ -459,7 +460,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 - (void)toggleControlsWithRecognizer:(UIGestureRecognizer *)recognizer {
     [self setControlsVisible:(!self.controlsVisible) animated:YES];
     
-    if (self.controlsVisible && self.isPlaying)
+    if (self.controlsVisible && self.playing)
         [self triggerAutoHideControlsTimer];
 }
 
@@ -571,11 +572,11 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 }
 
 - (void)playPause:(id)sender {
-    [self isPlaying] ? [self pause:sender] : [self play:sender];
+  [self setPlaying:!self.playing];
 }
 
 - (void)syncPlayPauseButton {
-    [self.playPauseControlButton setImage:([self isPlaying] ? self.pauseImage : self.playImage) forState:UIControlStateNormal];
+    [self.playPauseControlButton setImage:(self.playing ? self.pauseImage : self.playImage) forState:UIControlStateNormal];
 }
 
 - (void)beginScrubbing:(id)sender {

@@ -16,13 +16,10 @@
 @interface HSPlayerView : UIView
 @property (nonatomic, strong, readonly) AVPlayer *player;
 
-// Start player by setting the URL (for a start)
+// Start player by setting the URL
 @property (nonatomic, copy) NSURL *URL;
 
-- (void)play:(id)sender;
-- (void)pause:(id)sender;
-
-- (BOOL)isPlaying;
+@property (nonatomic, assign) BOOL playing;
 
 @property (nonatomic, assign) BOOL controlsVisible;
 - (void)setControlsVisible:(BOOL)controlsVisible animated:(BOOL)animated;
