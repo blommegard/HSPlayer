@@ -24,7 +24,7 @@
 
 - (BOOL)isPlaying;
 
-@property (nonatomic, assign, getter = isControlsVisible) BOOL controlsVisible;
+@property (nonatomic, assign) BOOL controlsVisible;
 - (void)setControlsVisible:(BOOL)controlsVisible animated:(BOOL)animated;
 
 // Hides statusBar if true, defaults to YES
