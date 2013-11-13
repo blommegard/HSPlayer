@@ -26,4 +26,12 @@
 
 // Hides statusBar if true, defaults to YES
 @property (nonatomic, assign) BOOL fullScreen;
+
+// Defaults to YES
+@property (nonatomic, assign) BOOL shouldAutoplay;
+// Defaults to NO
+@property (nonatomic, assign) BOOL shouldAutorepeat;
+// Defaults to YES
+@property (nonatomic, assign) BOOL shouldShowControlsOnTouch;
+
 @end
