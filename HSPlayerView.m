@@ -11,6 +11,7 @@
 #import <QuartzCore/QuartzCore.h>
 #import <MediaPlayer/MediaPlayer.h>
 #import <AVFoundation/AVFoundation.h>
+#import <Availability.h>
 
 // Constants
 CGFloat const HSPlayerViewControlsAnimationDelay = .4f; // ~ statusbar fade duration
@@ -62,6 +63,8 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 // Custom images for controls
 @property (nonatomic, strong) UIImage *playImage;
 @property (nonatomic, strong) UIImage *pauseImage;
+
+@property (nonatomic, strong) NSMutableDictionary *observations;
 @end
 
 @implementation HSPlayerView
@@ -96,10 +99,17 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
         [self setFullScreen:YES];
         
         [self setRestoreAfterScrubbingRate:1.];
+
+        [self setShouldAutoplay:YES];
+        [self setShouldShowControlsOnTouch:YES];
+
+        _observations = [NSMutableDictionary new];
     }
     
     return self;
 }
+
+
 
 #pragma mark KVO
 
@@ -122,7 +132,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
                 
                 // Enable buttons & scrubber
                 
-                if (!self.isScrubbing)
+                if (!self.isScrubbing && self.shouldAutoplay)
                   [self setPlaying:YES];
             }
             break;
@@ -186,6 +196,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 }
 
 - (void)dealloc {
+
     [self removePlayerTimeObserver];
 	
 	[self.player removeObserver:self forKeyPath:@"rate"];
@@ -194,10 +205,14 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     [self.playerItem removeObserver:self forKeyPath:@"duration"];
     [self.playerLayer removeObserver:self forKeyPath:@"readyForDisplay"];
 
-    if ([self.playerItem respondsToSelector:@selector(allowsAirPlayVideo)])
-        [self.playerItem removeObserver:self forKeyPath:@"airPlayVideoActive"];
-    
+    for (NSString *key in self.observations.allKeys) {
+        id object = [self.observations objectForKey:key];
+        [object removeObserver:self forKeyPath:key];
+    }
+
 	[self.player pause];
+
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
 #pragma mark - Properties
@@ -208,16 +223,39 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 
 - (void)setPlayer:(AVPlayer *)player {
     [(AVPlayerLayer *) [self layer] setPlayer:player];
-    
+
+    [self addObserverForActiveExternalPlayWithPlayer:player];
+}
+
+
+- (void)addObserverForActiveExternalPlayWithPlayer:(AVPlayer *)player
+{
     // Optimize for airplay if possible
-    if ([player respondsToSelector:@selector(allowsAirPlayVideo)]) {
+    SEL selector;
+    NSString *keyPath;
+#if __IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_6_0
+    selector = @selector(allowsAirPlayVideo);
+    keyPath = @"airPlayVideoActive";
+#else
+    selector = @selector(allowsExternalPlayback);
+    keyPath = @"externalPlaybackActive";
+#endif
+    
+    if ([player respondsToSelector:selector]) {
+#if __IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_6_0
         [player setAllowsAirPlayVideo:YES];
         [player setUsesAirPlayVideoWhileAirPlayScreenIsActive:YES];
-        
+#else
+        [player setAllowsExternalPlayback:YES];
+        [player setUsesExternalPlaybackWhileExternalScreenIsActive:YES];
+#endif
+
         [player addObserver:self
-                 forKeyPath:@"airPlayVideoActive"
+                 forKeyPath:keyPath
                     options:(NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew)
                     context:HSPlayerViewPlayerAirPlayVideoActiveObservationContext];
+
+        [self.observations setObject:player forKey:keyPath];
     }
 }
 
@@ -327,7 +365,11 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
         [_currentPlayerTimeLabel setBackgroundColor:[UIColor clearColor]];
         [_currentPlayerTimeLabel setTextColor:[UIColor whiteColor]];
         [_currentPlayerTimeLabel setFont:[UIFont systemFontOfSize:12.]];
+#if __IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_6_0
         [_currentPlayerTimeLabel setTextAlignment:UITextAlignmentCenter];
+#else
+        [_currentPlayerTimeLabel setTextAlignment:NSTextAlignmentCenter];
+#endif
     }
     
     return _currentPlayerTimeLabel;
@@ -339,10 +381,14 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
         [_remainingPlayerTimeLabel setBackgroundColor:[UIColor clearColor]];
         [_remainingPlayerTimeLabel setTextColor:[UIColor whiteColor]];
         [_remainingPlayerTimeLabel setFont:[UIFont systemFontOfSize:12.]];
-        [_remainingPlayerTimeLabel setTextAlignment:UITextAlignmentCenter];
         [_remainingPlayerTimeLabel setAutoresizingMask:(UIViewAutoresizingFlexibleLeftMargin)];
+#if __IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_6_0
+        [_remainingPlayerTimeLabel setTextAlignment:UITextAlignmentCenter];
+#else
+        [_remainingPlayerTimeLabel setTextAlignment:NSTextAlignmentCenter];
+#endif
     }
-    
+
     return _remainingPlayerTimeLabel;
 }
 
@@ -458,6 +504,8 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
 }
 
 - (void)toggleControlsWithRecognizer:(UIGestureRecognizer *)recognizer {
+    if (!self.shouldShowControlsOnTouch) return;
+    
     [self setControlsVisible:(!self.controlsVisible) animated:YES];
     
     if (self.controlsVisible && self.playing)
@@ -493,6 +541,7 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     // Remove observer from old playerItem and create new one
     if (self.playerItem) {
         [self.playerItem removeObserver:self forKeyPath:@"status"];
+        [self.playerItem removeObserver:self forKeyPath:@"duration"];
         
         [[NSNotificationCenter defaultCenter] removeObserver:self
                                                         name:AVPlayerItemDidPlayToEndTimeNotification
@@ -512,12 +561,12 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
                       forKeyPath:@"duration"
                          options:(NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew)
                          context:HSPlayerViewPlaterItemDurationObservationContext];
-    
-    [[NSNotificationCenter defaultCenter] addObserverForName:AVPlayerItemDidPlayToEndTimeNotification
-                                                      object:self.playerItem
-                                                       queue:nil usingBlock:^(NSNotification *note) {
-                                                           [self setSeekToZeroBeforePlay:YES]; 
-                                                       }];
+
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(didPlayToEnd:)
+                                                 name:AVPlayerItemDidPlayToEndTimeNotification
+                                               object:self.playerItem];
+
     
     [self setSeekToZeroBeforePlay:YES];
     
@@ -615,7 +664,18 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     [self.scrubberControlSlider setMaximumValue:duration];
     [self.scrubberControlSlider setValue:currentSeconds];
     
-    NSLog(@"%@", self.player.currentItem.seekableTimeRanges);
+//    NSLog(@"%@", self.player.currentItem.seekableTimeRanges);
+}
+
+
+#pragma mark - NSNotification
+
+- (void)didPlayToEnd:(NSNotification *)notification
+{
+    [self setSeekToZeroBeforePlay:YES];
+    if (self.shouldAutorepeat) {
+        [self setPlaying:YES];
+    }
 }
 
 #pragma mark - UIGestureRecognizerDelegate
