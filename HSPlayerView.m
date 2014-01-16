@@ -194,8 +194,8 @@ static void *HSPlayerViewPlayerLayerReadyForDisplayObservationContext = &HSPlaye
     [self.playerItem removeObserver:self forKeyPath:@"duration"];
     [self.playerLayer removeObserver:self forKeyPath:@"readyForDisplay"];
 
-    if ([self.playerItem respondsToSelector:@selector(allowsAirPlayVideo)])
-        [self.playerItem removeObserver:self forKeyPath:@"airPlayVideoActive"];
+    if ([self.player respondsToSelector:@selector(allowsAirPlayVideo)])
+        [self.player removeObserver:self forKeyPath:@"airPlayVideoActive"];
     
 	[self.player pause];
 }
